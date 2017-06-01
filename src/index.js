@@ -118,6 +118,16 @@ var wtf_wikipedia = (function() {
 	var previousSection = '';
 	var previousSectionRelevant = true;
     var number = 1;
+    // Turns = Intro = into 1, == Summary == into 2 etc;
+    var countHeaderNumber = function (section) {
+    	var aSection = section.match(/^={1,5}/);
+
+    	if (Array.isArray(aSection) && aSection.length !== 0) {
+    		return aSection[0].length;
+    	} else {
+    		return null;
+    	}
+    }
     lines.forEach(function(part) {
       if (!section) {
         return;
