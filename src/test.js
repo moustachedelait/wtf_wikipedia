@@ -54,30 +54,31 @@ function countHeaderNumber (section) {
 // write a subroutine
 //
 
- It 1  = INTRO =
+ * It 1  = INTRO =
 
  section = INTRO
  headCount = 1;
  //previousSectionRelevant = false;
 
 
- it 2 some text
+ * it 2 some text
 
  section = INTRO
  headCount = 1;
  //previousSectionRelevant = false;
 
 
- it 3 = summary =
+ * it 3 = summary =
+ section =   = summary =
  headCount = 1;
  previousSectionRelevant = false;
 
- it 4 == part 1 ==
+ * it 4 == part 1 ==
  oldheadCount = 1;
  currentHeadcount = 2;
  previousSectionRelevant = true;
  if (currentHeadcount = oldheadCount + 1) {
 
 
- */
- }
+ /* */
+ 

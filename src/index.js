@@ -117,6 +117,7 @@ var wtf_wikipedia = (function() {
     var section = 'Intro';
 	var previousSection = '';
 	var previousSectionRelevant = true;
+    var sectionStack = [];
     var number = 1;
     // Turns = Intro = into 1, == Summary == into 2 etc;
     var countHeaderNumber = function (section) {
@@ -128,6 +129,16 @@ var wtf_wikipedia = (function() {
     		return null;
     	}
     }
+
+    var isEmptyParentSection = function (section, potentialParent) {
+        if (countHeaderNumber(section) - 1 === countHeaderNumber(potentialParent)) {
+            return !countHeaderNumber(potentialParent).hasText;
+        } else {
+            return false;
+        }
+        return
+    }
+
     lines.forEach(function(part) {
       if (!section) {
         return;
@@ -175,27 +186,46 @@ var wtf_wikipedia = (function() {
           section = undefined;
 	  } else {
 		  if (previousSection !== '' && options.removeEmptyHeaders === false) {
-			  section = previousSection + " : " + section;
+              // disable old effort
+         //	  section = previousSection + " : " + section;
 		  }
 	  }
 	  	previousSectionRelevant = true;
+
+        sectionStack.push({
+            name: section,
+            hasText: false
+        });
+
         return;
       }
 
 	  //finding text to add to section means our current section is nonEmpty, invalidate it
 	  previousSection = '';
 	  previousSectionRelevant = false;
+
+      if (sectionStack.length > 0) {
+          sectionStack[sectionStack.length - 1].hasText = true;
+        }
+      // Combine the parent header if applicable
+      var sectionLabel = section;
+      if (options.removeEmptyHeaders === false && sectionStack.length > 1) && isEmptyParentSection(sectionStack[sectionStack.length - 1], sectionStack[sectionStack.length - 2]) {
+          sectionLabel = sectionStack[sectionStack.length - 2].name + " : " + sectionStack[sectionStack.length - 1].name;
+      }
+
+
       //still alive, add it to the section
       sentence_parser(part).forEach(function(line) {
         line = parse_line(line);
+
         if (line && line.text) {
           // if (!output[section]) {
-          if (!output.get(section)) {
+          if (!output.get(sectionLabel)) {
             // output[section] = [];
-            output.set(section, []);
+            output.set(sectionLabel, []);
           }
           // output[section].push(line);
-          output.get(section).push(line);
+          output.get(sectionLabel).push(line);
         }
       });
     });
