@@ -23,7 +23,8 @@ var wtf_wikipedia = (function() {
 
   // options
   var defaultParseOptions = {
-    ignoreLists: true
+    ignoreLists: true,
+    removeEmptyHeaders: true
   };
 
   //some xml elements are just junk, and demand full inglorious death by regular exp
@@ -114,6 +115,8 @@ var wtf_wikipedia = (function() {
     var output = new Map();
     var lines = wiki.replace(/\r/g, '').split(/\n/);
     var section = 'Intro';
+	var previousSection = '';
+	var previousSectionRelevant = true;
     var number = 1;
     lines.forEach(function(part) {
       if (!section) {
@@ -147,16 +150,31 @@ var wtf_wikipedia = (function() {
       //headings
       var ban_headings = new RegExp('^ ?(' + i18n.sources.join('|') + ') ?$', 'i'); //remove things like 'external links'
       if (part.match(/^={1,5}[^=]{1,200}={1,5}$/)) {
-        section = part.match(/^={1,5}([^=]{1,200}?)={1,5}$/) || [];
+		if (previousSectionRelevant === true) {
+			previousSection = section;
+		} else {
+			previousSection = '';
+		}
+
+		section = part.match(/^={1,5}([^=]{1,200}?)={1,5}$/) || [];
         section = section[1] || '';
         section = section.replace(/\./g, ' '); // this is necessary for mongo, i'm sorry
         section = helpers.trim_whitespace(section);
         //ban some sections
         if (section && section.match(ban_headings)) {
           section = undefined;
-        }
+	  } else {
+		  if (previousSection !== '' && options.removeEmptyHeaders === false) {
+			  section = previousSection + " : " + section;
+		  }
+	  }
+	  	previousSectionRelevant = true;
         return;
       }
+
+	  //finding text to add to section means our current section is nonEmpty, invalidate it
+	  previousSection = '';
+	  previousSectionRelevant = false;
       //still alive, add it to the section
       sentence_parser(part).forEach(function(line) {
         line = parse_line(line);
