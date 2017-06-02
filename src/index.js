@@ -131,8 +131,8 @@ var wtf_wikipedia = (function() {
     }
 
     var isEmptyParentSection = function (section, potentialParent) {
-        if (countHeaderNumber(section) - 1 === countHeaderNumber(potentialParent)) {
-            return !countHeaderNumber(potentialParent).hasText;
+        if (countHeaderNumber(section.sectionNameWithEquals) - 1 === countHeaderNumber(potentialParent.sectionNameWithEquals)) {
+            return !potentialParent.hasText;
         } else {
             return false;
         }
@@ -171,6 +171,7 @@ var wtf_wikipedia = (function() {
       //headings
       var ban_headings = new RegExp('^ ?(' + i18n.sources.join('|') + ') ?$', 'i'); //remove things like 'external links'
       if (part.match(/^={1,5}[^=]{1,200}={1,5}$/)) {
+		  var sectionNameWithEquals;
 		if (previousSectionRelevant === true) {
 			previousSection = section;
 		} else {
@@ -178,6 +179,7 @@ var wtf_wikipedia = (function() {
 		}
 
 		section = part.match(/^={1,5}([^=]{1,200}?)={1,5}$/) || [];
+		sectionNameWithEquals = section[0];
         section = section[1] || '';
         section = section.replace(/\./g, ' '); // this is necessary for mongo, i'm sorry
         section = helpers.trim_whitespace(section);
@@ -193,6 +195,7 @@ var wtf_wikipedia = (function() {
 	  	previousSectionRelevant = true;
 
         sectionStack.push({
+			sectionNameWithEquals: sectionNameWithEquals,
             name: section,
             hasText: false
         });
@@ -209,7 +212,7 @@ var wtf_wikipedia = (function() {
         }
       // Combine the parent header if applicable
       var sectionLabel = section;
-      if (options.removeEmptyHeaders === false && sectionStack.length > 1) && isEmptyParentSection(sectionStack[sectionStack.length - 1], sectionStack[sectionStack.length - 2]) {
+      if (options.removeEmptyHeaders === false && sectionStack.length > 1 && isEmptyParentSection(sectionStack[sectionStack.length - 1], sectionStack[sectionStack.length - 2])) {
           sectionLabel = sectionStack[sectionStack.length - 2].name + " : " + sectionStack[sectionStack.length - 1].name;
       }
 
