@@ -14,7 +14,7 @@ wtf_wikipedia.from_api(title, language, function (markup) {
 
 	p = wtf_wikipedia.parse(markup, {
 		ignoreLists: false,
-		removeEmptyHeaders: false
+		appendSectionLabelsWithParent: true
 	 });
 
 	console.log(p);
@@ -81,4 +81,3 @@ function countHeaderNumber (section) {
 
 
  /* */
- 

@@ -24,7 +24,7 @@ var wtf_wikipedia = (function() {
   // options
   var defaultParseOptions = {
     ignoreLists: true,
-    removeEmptyHeaders: true
+    appendSectionLabelsWithParent: false
   };
 
   //some xml elements are just junk, and demand full inglorious death by regular exp
@@ -115,19 +115,17 @@ var wtf_wikipedia = (function() {
     var output = new Map();
     var lines = wiki.replace(/\r/g, '').split(/\n/);
     var section = 'Intro';
-	var previousSection = '';
-	var previousSectionRelevant = true;
-    var sectionStack = [];
+    var sectionStack = []; // only relevant when appendSectionLabelsWithParent === true
     var number = 1;
     // Turns = Intro = into 1, == Summary == into 2 etc;
     var countHeaderNumber = function (section) {
-    	var aSection = section.match(/^={1,5}/);
+      var aSection = section.match(/^={1,5}/);
 
-    	if (Array.isArray(aSection) && aSection.length !== 0) {
-    		return aSection[0].length;
-    	} else {
-    		return null;
-    	}
+      if (Array.isArray(aSection) && aSection.length !== 0) {
+        return aSection[0].length;
+      } else {
+        return null;
+      }
     }
 
     var isEmptyParentSection = function (section, potentialParent) {
@@ -171,51 +169,47 @@ var wtf_wikipedia = (function() {
       //headings
       var ban_headings = new RegExp('^ ?(' + i18n.sources.join('|') + ') ?$', 'i'); //remove things like 'external links'
       if (part.match(/^={1,5}[^=]{1,200}={1,5}$/)) {
-		  var sectionNameWithEquals;
-		if (previousSectionRelevant === true) {
-			previousSection = section;
-		} else {
-			previousSection = '';
-		}
+      var sectionNameWithEquals;
 
-		section = part.match(/^={1,5}([^=]{1,200}?)={1,5}$/) || [];
-		sectionNameWithEquals = section[0];
+        section = part.match(/^={1,5}([^=]{1,200}?)={1,5}$/) || [];
+        sectionNameWithEquals = section[0]; // used to keep track how deep this section is
         section = section[1] || '';
         section = section.replace(/\./g, ' '); // this is necessary for mongo, i'm sorry
         section = helpers.trim_whitespace(section);
         //ban some sections
         if (section && section.match(ban_headings)) {
           section = undefined;
-	  } else {
-		  if (previousSection !== '' && options.removeEmptyHeaders === false) {
-              // disable old effort
-         //	  section = previousSection + " : " + section;
-		  }
-	  }
-	  	previousSectionRelevant = true;
+        }
 
+        // helps keep track who the parent section is, in case options.appendSectionLabelsWithParent === true
         sectionStack.push({
-			sectionNameWithEquals: sectionNameWithEquals,
-            name: section,
-            hasText: false
+          sectionNameWithEquals: sectionNameWithEquals,
+          name: section,
+          hasText: false
         });
 
         return;
       }
 
-	  //finding text to add to section means our current section is nonEmpty, invalidate it
-	  previousSection = '';
-	  previousSectionRelevant = false;
+      var sectionLabel = section;
 
-      if (sectionStack.length > 0) {
+      // Potential to expand the section label, if the option is turned on and the right circumstances apply
+      if (options.appendSectionLabelsWithParent === true) {
+          // We've made it to content text, mark that the last section has text (and will not be used as a parent marker)
+        if (sectionStack.length > 0) {
           sectionStack[sectionStack.length - 1].hasText = true;
         }
-      // Combine the parent header if applicable
-      var sectionLabel = section;
-      if (options.removeEmptyHeaders === false && sectionStack.length > 1 && isEmptyParentSection(sectionStack[sectionStack.length - 1], sectionStack[sectionStack.length - 2])) {
-          sectionLabel = sectionStack[sectionStack.length - 2].name + " : " + sectionStack[sectionStack.length - 1].name;
-      }
 
+        // Don't get influenced by siblings, remove the siblings from the stack till we find a parent node
+        while (sectionStack.length > 1 && countHeaderNumber(sectionStack[sectionStack.length - 1].sectionNameWithEquals) === countHeaderNumber(sectionStack[sectionStack.length - 2].sectionNameWithEquals)) {
+          sectionStack.splice(-2, 1);
+        }
+
+        // Check our previous (now) non-sibling node, is it without content text and exactly one level up? Then append the section label with it
+        if (options.appendSectionLabelsWithParent === true && sectionStack.length > 1 && isEmptyParentSection(sectionStack[sectionStack.length - 1], sectionStack[sectionStack.length - 2])) {
+            sectionLabel = sectionStack[sectionStack.length - 2].name + " : " + sectionStack[sectionStack.length - 1].name;
+        }
+      }
 
       //still alive, add it to the section
       sentence_parser(part).forEach(function(line) {
